@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pathly: delivery routes that go around the traffic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Lexend:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="gate" class="gate" role="dialog" aria-modal="true" aria-labelledby="gt">
+<img class="bg" src="images/hero.jpg" alt="">
+<form id="reg" novalidate>
+<h2 id="gt">Contact us</h2>
+<p>Register your details to enter the site and get in touch about this project.</p>
+<label for="fn">Full name</label><input id="fn" autocomplete="name" required>
+<label for="fe">Email</label><input id="fe" type="email" autocomplete="email" required>
+<label for="fm">Message (optional)</label><textarea id="fm"></textarea>
+<p id="err" role="alert"></p>
+<button type="submit">Register and enter</button>
+<button type="button" class="link" id="skip">Skip for now</button>
+<p class="small">Demo form: nothing is sent or stored.</p>
+</form>
+</div>
+
+<div class="wrap" id="top">
+<header class="top"><span class="brand">Pathly</span><a href="#scenarios">Scenarios</a><a href="#control">Data board</a><a href="#how">How it thinks</a><a href="#features">Features</a><a href="#calc">Calculator</a><a href="#faq">FAQ</a><a href="#about">About</a><button id="theme" class="alt" type="button" style="padding:6px 12px">Switch theme</button></header>
+
+<div class="hero">
+<p class="hi" id="hi"></p>
+<h1>Delivery routes that go around the traffic</h1>
+<p class="sub">Add your stops, mark the jams, and watch the van pick a new way.</p>
+</div>
+
+<div class="planner">
+<div class="bar">
+<button id="rush" type="button">Simulate rush hour</button>
+<button id="addStop" type="button" class="alt">Add a random stop</button>
+<button id="clrTraffic" type="button" class="alt">Clear traffic</button>
+<button id="clrStops" type="button" class="alt">Clear stops</button>
+<button id="naive" type="button" class="alt" aria-pressed="false">Show the route that ignores traffic</button>
+<button id="replay" type="button" class="alt">Replay</button>
+</div>
+<canvas id="map" role="img" aria-label="3D city map with a depot, delivery stops, traffic jams and the planned route"></canvas>
+<div class="legend"><span><i style="background:var(--orange)"></i>Planned route</span><span><i style="background:var(--red)"></i>Traffic jam</span><span><i style="background:var(--muted)"></i>Route that ignores traffic</span><span>Tap an intersection to add or remove a stop. Tap a road to add or clear a jam. Drag to rotate the city.</span></div>
+<p id="msg" aria-live="polite"></p>
+<div class="stats">
+<div><small>Trip time</small><b id="mTime">-</b></div>
+<div><small>Distance</small><b id="mKm">-</b></div>
+<div><small>Time saved</small><b id="mSaved">-</b></div>
+<div><small>Jams dodged</small><b id="mJam">-</b></div>
+</div>
+<p class="note" style="margin:12px 2px 0">Simulated city grid: a clear block counts as 2 minutes and 0.4 km, and a jammed block costs four times as much.</p>
+</div>
+</div>
+
+<section id="scenarios"><div class="wrap">
+<h2>Try a scenario</h2>
+<p>One tap loads a situation into the map above and plans the route for it.</p>
+<div class="bar">
+<button type="button" data-p="rush">Rush hour downtown</button>
+<button type="button" data-p="bridge" class="alt">Closed bridge</button>
+<button type="button" data-p="many" class="alt">Two jams, four stops</button>
+<button type="button" data-p="clear" class="alt">Clear roads</button>
+</div>
+</div></section>
+
+<section id="control"><div class="wrap">
+<h2>The data board</h2>
+<p>Real measurements from the TomTom Traffic Index 2025. Drag the globe to spin it, or tap a city to focus on it. Taller, redder spikes mean heavier congestion.</p>
+<div class="ctrl">
+<div class="kpis">
+<div><b data-k="500">0</b><small>Cities measured</small></div>
+<div><b data-k="62">0</b><small>Countries</small></div>
+<div><b data-k="3.65" data-d="2">0</b><small>Trillion km of trips</small></div>
+<div><b data-k="75.9" data-d="1" data-s="%">0</b><small>Highest congestion level</small></div>
+<div><b data-k="191" data-s=" h">0</b><small>Hours lost per driver in Dublin</small></div>
+</div>
+<div class="cmain">
+<aside class="cp"><h3>Cities</h3><div id="cList" class="clist"></div></aside>
+<div class="cp cglobe"><div class="gbox"><canvas id="globe" role="img" aria-label="Rotating 3D globe with congestion hotspots shown as spikes"></canvas></div>
+<div class="gcard" aria-live="polite"><b id="wName">Pick a city</b><span id="wTag"></span><div class="gbar"><i id="wBar"></i></div><small id="wLvl"></small></div></div>
+</div>
+<div class="cbot">
+<div class="cp"><h3>Congestion by city, 2025</h3><table class="ct"><thead><tr><th>City</th><th>Level</th><th>Hours lost</th></tr></thead><tbody id="cRows"></tbody></table></div>
+<div class="cp"><h3>Hours lost per driver in rush hour</h3><canvas id="cbars" role="img" aria-label="Bar chart of hours lost per driver in rush hour, by city"></canvas></div>
+<div class="cp cg"><h3>Most congested city</h3><svg viewBox="0 0 120 120" role="img" aria-label="Gauge showing 75.9 percent congestion in Mexico City"><circle cx="60" cy="60" r="52" fill="none" stroke="#16264a" stroke-width="9"/><circle id="gArc" cx="60" cy="60" r="52" fill="none" stroke="#ff9a2e" stroke-width="9" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7" transform="rotate(-90 60 60)"/><text id="gTxt" x="60" y="68" text-anchor="middle" font-size="22" font-weight="700" fill="#e6ecff">0%</text></svg><small>Mexico City, 2025</small></div>
+<div class="cp"><h3>How to read it</h3><ul class="cdef"><li><b>Congestion level</b>Extra travel time compared with free-flowing traffic. 75.9% means trips take about three-quarters longer.</li><li><b>Hours lost</b>Extra time a driver spends in rush hour traffic over a year.</li><li><b>Source</b>TomTom Traffic Index 2025, 15th edition.</li></ul></div>
+</div>
+</div>
+<p class="note">Source: <a href="https://www.tomtom.com/traffic-index/" style="color:inherit">TomTom Traffic Index 2025</a> (15th edition), annual averages for 2025. Congestion level is the extra travel time compared with free-flowing traffic. Figures can differ slightly between TomTom pages, depending on how a city area is defined. Only cities with figures I could verify are shown, and a dash means a figure I could not verify.</p>
+</div></section>
+
+<section id="how" class="alt"><div class="wrap">
+<h2>How it thinks</h2>
+<div class="cols">
+<div><h3>Junctions and roads</h3><p>The city becomes points and links. Every road has a cost, and a jam makes that cost jump.</p></div>
+<div><h3>Traffic changes the best way</h3><p>A jammed road costs several times more, so the cheapest trip can be a longer one.</p></div>
+<div><h3>Many stops, one loop</h3><p>With several deliveries, the planner tries the possible orders and keeps the cheapest loop back to the depot.</p></div>
+</div>
+</div></section>
+
+<section id="features"><div class="wrap">
+<h2>What it does</h2>
+<div class="cols">
+<div><h3>Instant rerouting</h3><p>Mark a jam and the route is planned again straight away.</p></div>
+<div><h3>Best stop order</h3><p>It does not just visit stops in the order you typed them.</p></div>
+<div><h3>Jam awareness</h3><p>Busy roads cost more, so the planner avoids them when it pays off.</p></div>
+<div><h3>Side-by-side proof</h3><p>See the route that ignores traffic next to the one that does not.</p></div>
+<div><h3>Plain results</h3><p>Minutes, kilometers and time saved, with no jargon to decode.</p></div>
+<div><h3>Any screen</h3><p>Works on a projector or on a phone in the van.</p></div>
+</div>
+</div></section>
+
+<section id="day" class="alt"><div class="wrap">
+<h2>A courier’s day</h2>
+<ol class="tl">
+<li><b>7:30</b><span>Load the van. The depot’s list becomes the day’s stops.</span></li>
+<li><b>8:15</b><span>First loop planned. The planner picks the cheapest order.</span></li>
+<li><b>9:40</b><span>A jam appears. The road gets expensive and the route is planned again.</span></li>
+<li><b>11:00</b><span>A late order comes in. One more stop, one more recalculation.</span></li>
+<li><b>13:30</b><span>A road closes. The planner finds another way, or says the stop cannot be reached.</span></li>
+<li><b>16:45</b><span>Back at the depot. Compare the plan with what really happened.</span></li>
+</ol>
+</div></section>
+
+<section><div class="wrap">
+<h2>With and without a planner</h2>
+<div class="two">
+<div><h3>Without</h3><ul><li>Stops are driven in list order.</li><li>Drivers find jams by sitting in them.</li><li>A late order means guessing a new plan.</li><li>Nobody can say how much time was lost.</li></ul></div>
+<div class="win"><h3>With Pathly</h3><ul><li>Stops are reordered into a short loop.</li><li>Jams raise a road’s cost before the van reaches it.</li><li>New orders and closures trigger a fresh plan.</li><li>Time saved is shown on every trip.</li></ul></div>
+</div>
+</div></section>
+
+<section class="alt"><div class="wrap">
+<h2>The method in plain words</h2>
+<ol class="tl">
+<li><b>1</b><span>Draw the city as points (junctions) and links (roads).</span></li>
+<li><b>2</b><span>Give every road a cost. A clear block is cheap, a jammed block is not.</span></li>
+<li><b>3</b><span>Work out the cheapest way between every pair of stops.</span></li>
+<li><b>4</b><span>Try the possible stop orders and add up each loop.</span></li>
+<li><b>5</b><span>Keep the cheapest loop, drive it, and repeat when something changes.</span></li>
+</ol>
+</div></section>
+
+<section id="calc"><div class="wrap">
+<h2>What could a fleet save?</h2>
+<p>Put in your own numbers. This is a rough estimate, not a promise.</p>
+<div class="calc">
+<label>Vans<input id="cV" type="number" min="1" value="10"></label>
+<label>Trips per van per day<input id="cT" type="number" min="1" value="3"></label>
+<label>Minutes lost to traffic per trip<input id="cM" type="number" min="0" value="25"></label>
+<label>Share you could avoid: <b id="cPv">20%</b><input id="cP" type="range" min="5" max="60" value="20"></label>
+</div>
+<p class="big"><b id="cOut">0</b> hours saved per week</p>
+</div></section>
+
+<section id="uses" class="alt"><div class="wrap">
+<h2>Who it’s for</h2>
+<div class="cols">
+<div><h3>Parcel couriers</h3><p>Dozens of drops a day, where one blocked street can delay everything after it.</p></div>
+<div><h3>Food delivery</h3><p>Short trips where minutes matter and traffic changes while the order is still hot.</p></div>
+<div><h3>Field service teams</h3><p>Technicians with a list of visits who need a sensible order, not just the nearest one.</p></div>
+</div>
+</div></section>
+
+<section><div class="wrap">
+<h2>Where this goes next</h2>
+<div class="cols">
+<div><h3>Real maps and live traffic</h3><p>Swap the made-up grid for real roads and real speeds.</p></div>
+<div><h3>Vehicle capacity</h3><p>Stop a van from being given more parcels than it can carry.</p></div>
+<div><h3>Delivery time windows</h3><p>Respect “between 10 and 12” promises made to customers.</p></div>
+<div><h3>Several vans at once</h3><p>Share the stops across a fleet instead of one loop.</p></div>
+<div><h3>Faster search</h3><p>Smarter methods that stay quick in a big city.</p></div>
+<div><h3>Driver feedback</h3><p>Learn from where plans and reality disagreed.</p></div>
+</div>
+</div></section>
+
+<section id="faq" class="alt"><div class="wrap">
+<h2>Questions</h2>
+<details><summary>Is the traffic real?</summary><p>In the route planner, no: you draw the jams yourself on a made-up grid. The globe and the data board use real 2025 measurements from the TomTom Traffic Index.</p></details>
+<details><summary>Why does the route sometimes not change?</summary><p>If a jam is not on the way, or going around costs more than sitting in it, the planner keeps the direct route.</p></details>
+<details><summary>What does “jams dodged” mean?</summary><p>The number of jammed road blocks the traffic-blind route would drive through that the planned route avoids.</p></details>
+<details><summary>Why only four stops?</summary><p>The demo checks every possible order. That is instant for four stops and grows very fast after that.</p></details>
+<details><summary>Does the Contact us form save my details?</summary><p>No. It is a demo form, so nothing is sent or stored.</p></details>
+<details><summary>Can I use it on my phone?</summary><p>Yes. Tap intersections and roads on the map the same way you would click them.</p></details>
+</div></section>
+
+<section id="terms"><div class="wrap">
+<h2>Words used on this page</h2>
+<dl class="gl">
+<dt>Depot</dt><dd>Where the van starts and ends the day. The blue D on the map.</dd>
+<dt>Junction</dt><dd>A point where roads meet. Tap one to add a stop.</dd>
+<dt>Cost</dt><dd>How much a road “hurts” to drive. Jams make it higher.</dd>
+<dt>Jam</dt><dd>A road marked in red that costs four times as much to use.</dd>
+<dt>Detour</dt><dd>A longer way that still ends up cheaper overall.</dd>
+<dt>Loop</dt><dd>The full trip from the depot, through every stop, and back.</dd>
+</dl>
+</div></section>
+
+<section id="about"><div class="wrap">
+<div class="about">
+<h2>About this project</h2>
+<p>This site is the working demo for a research project on intelligent logistics and route optimization. It shows how a computer can pick a delivery route and change it when conditions change.</p>
+<p>The route planner’s city is a made-up grid, so its minutes and kilometers are simulated. The globe and the data board use real 2025 figures from the TomTom Traffic Index.</p>
+</div>
+</div></section>
+
+<footer><div class="wrap">Pathly · Intelligent Logistics and Route Optimization · Traffic data: TomTom Traffic Index 2025<br><a href="#scenarios" style="color:inherit">Scenarios</a> · <a href="#faq" style="color:inherit">Questions</a> · <a href="#about" style="color:inherit">About</a> · <a href="#top" style="color:inherit">Back to the map</a></div></footer>
+
+<script src="script.js"></script>
+</body>
+</html>
